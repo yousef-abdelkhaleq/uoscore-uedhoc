@@ -25,7 +25,7 @@ static int start_coap_client(int *sockfd)
 {
 	struct sockaddr_in6 servaddr;
 	//const char IPV6_SERVADDR[] = { "::1" };
-	const char IPV6_SERVADDR[] = { "2001:db8::2" };
+	const char IPV6_SERVADDR[] = { "2001:db9::2" };
 	int r = ipv6_sock_init(SOCK_CLIENT, IPV6_SERVADDR, &servaddr,
 			       sizeof(servaddr), sockfd);
 	if (r < 0) {
