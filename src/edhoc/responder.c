@@ -296,7 +296,7 @@ enum err msg2_gen(struct edhoc_responder_context *c, struct runtime_context *rc,
 
 enum err msg2_gen_extended(struct edhoc_responder_context *c, struct runtime_context *rc,
         uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
-        enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *ead_1, uint32_t *ead_1_len))
+        enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *g_x, uint32_t g_x_len))
 {
 
 	PRINT_ARRAY("message_1 (CBOR Sequence)", rc->msg1, rc->msg1_len);
@@ -337,7 +337,7 @@ enum err msg2_gen_extended(struct edhoc_responder_context *c, struct runtime_con
 	authentication_type_get(method, &rc->static_dh_i, &static_dh_r);
 
 	/*process critical ead items*/
-	TRY(process_ead_1(c, ead_1, ead_1_len));
+	TRY(process_ead_1(c, ead_1, ead_1_len, g_x, g_x_len));
 
 	/******************* create and send message 2*************************/
 	uint8_t th2[HASH_DEFAULT_SIZE];
@@ -576,7 +576,7 @@ enum err edhoc_responder_run_extended_2(
    uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
    enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
    enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
-   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len))
+   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len, uint8_t *g_x, uint32_t g_x_len))
 {
 	struct runtime_context rc = { 0 };
 	runtime_context_init(&rc);
@@ -629,7 +629,7 @@ enum err edhoc_responder_run_extended_ead_proc(
 	uint8_t *prk_out, uint32_t prk_out_len,
 	enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
 	enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
-	enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len))
+	enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len, uint8_t *g_x, uint32_t g_x_len))
   
 {
 	return edhoc_responder_run_extended_2(c, cred_i_array, num_cred_i,

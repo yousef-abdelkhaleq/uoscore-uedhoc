@@ -44,7 +44,17 @@ extern enum err process_ead_2(uint8_t *ead_2, uint32_t *ead_2_len);
  * @param   data pointer to a buffer containing ead_2
  * @param   data_len length of the ead_2 cbor sequence
  */
-extern enum err process_ead_1(struct edhoc_responder_context *c, uint8_t *ead_1, uint32_t *ead_1_len);
+extern enum err process_ead_1(struct edhoc_responder_context *c, uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *g_x, uint32_t g_x_len);
+
+
+/**
+ * @brief   In this function the user implements a parser for an OCSP staple request and calls the parse when finding a staple request label
+ *          during processing the ead item
+ * @param   data pointer to a buffer containing ead_2
+ * @param   data_len length of the ead_2 cbor sequence
+ */
+extern enum err parse_stapleRequest_ead_1_value(uint8_t *ead_value, uint8_t *responderIdList, uint8_t *nonce_option);
+
 
 
 #endif

@@ -28,6 +28,9 @@ enum err {
 	/*indicates that transport layer is not initialized*/
 	transport_deinitialized = 6,
 
+	/*EAD errors*/
+	malformed_ead_value =7,
+
 	/*EDHOC specifc errors*/
 	/*todo implement error messages*/
 	error_message_received = 101,

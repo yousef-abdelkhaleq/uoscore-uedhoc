@@ -126,7 +126,7 @@ enum err msg2_gen(struct edhoc_responder_context *c, struct runtime_context *rc,
  */
 enum err msg2_gen_extended(struct edhoc_responder_context *c, struct runtime_context *rc,
         uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
-        enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *ead_1, uint32_t *ead_1_len));
+        enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *g_x, uint32_t g_x_len));
 
 /**
  * @brief Processes message 3. This function should by used by on the responder 

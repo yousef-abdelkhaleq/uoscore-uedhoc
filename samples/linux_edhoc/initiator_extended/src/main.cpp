@@ -137,9 +137,21 @@ enum err process_ead_2(uint8_t *ead_2, uint32_t *ead_2_len)
 
 	//we can act on EAD_2 from here and accordingly stop EDHOC for example in the case of an invalid OCSP staple
 
+	//function returns an int 1 for valid staple //this function can instead be passed as a handle to the caller function
+	//EAD_get staple -> parse staple -> verify staple -> get cert status
+												// ->{verify signature, verify responder id, verify produced at, verify nonce} 
+
+
 	return ok;
 }
 
+//function returns an int 1 for valid staple //this function can instead be passed as a handle to the caller function
+//EAD_get staple -> parse staple -> verify staple -> get cert status
+												// ->{verify signature, parse responseData, verify responder id, verify produced at, verify nonce} 
+
+//parse staple function will set the pointers to the responseData, signature Value and signature alg
+
+//parse responseData will set the pointers to the members of responseData which can then be used in the other verify functions
 
 int main()
 {
@@ -152,9 +164,9 @@ int main()
 	uint8_t PRK_out[PRK_DEFAULT_SIZE];
 	uint8_t err_msg[ERR_MSG_DEFAULT_SIZE];
 	uint32_t err_msg_len = sizeof(err_msg);
-	uint8_t ad_2[AD_DEFAULT_SIZE];
+	uint8_t ad_2[AD_DEFAULT_SIZE+64];
 	uint32_t ad_2_len = sizeof(ad_2);
-	uint8_t ad_4[AD_DEFAULT_SIZE];
+	uint8_t ad_4[AD_DEFAULT_SIZE+64];
 	uint32_t ad_4_len = sizeof(ad_2);
 
 	/* test vector inputs */
@@ -165,7 +177,14 @@ int main()
 	uint8_t TEST_VEC_NUM = 1;
 	uint8_t vec_num_i = TEST_VEC_NUM - 1;
 
-	uint8_t ead1_test[]={0x01,0x02,0x03,0x04};
+	// uint8_t ead1_test[]={0x01,0x02,0x03,0x04};
+	uint8_t ead1_stapleRequest[]={0x21,0x42,0xF6,0xF5}; //staple request
+																	// # CBOR sequence with 3 elements
+																	// 21 # negative(1) //cbor -2 for staple request critical label
+																	// F6 # primitive(22) //cbor Null for out of band agreed upon responderIdList
+																	// F5 # primitive(21) //cbor True for requesting a nonce //can be optional
+
+
 
 	c_i.msg4 = true;
 	c_i.sock = &sockfd;
@@ -178,8 +197,8 @@ int main()
 	// c_i.ead_1.ptr = (uint8_t *)test_vectors[vec_num_i].ead_1;
 	
 	//just passing our own test
-	c_i.ead_1.ptr = ead1_test; 
-	c_i.ead_1.len = sizeof(ead1_test);
+	c_i.ead_1.ptr = ead1_stapleRequest; 
+	c_i.ead_1.len = sizeof(ead1_stapleRequest);
 	
 	c_i.ead_3.len = test_vectors[vec_num_i].ead_3_len;
 	c_i.ead_3.ptr = (uint8_t *)test_vectors[vec_num_i].ead_3;

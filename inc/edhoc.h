@@ -286,7 +286,7 @@ enum err edhoc_responder_run_extended_ead_proc(
    uint8_t *prk_out, uint32_t prk_out_len,
    enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
    enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
-   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len));
+   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len, uint8_t *g_x, uint32_t g_x_len));
 
 /**
  * @brief   Executes the EDHOC protocol on the responder side
@@ -353,7 +353,7 @@ enum err edhoc_responder_run_extended_2(
    uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
    enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
    enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
-   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len));
+   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len, uint8_t *g_x, uint32_t g_x_len));
 
 
 
