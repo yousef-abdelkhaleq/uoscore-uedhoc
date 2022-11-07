@@ -64,6 +64,27 @@ enum err msg3_gen(const struct edhoc_initiator_context *c,
 		  uint32_t prk_out_len);
 
 /**
+ * @brief Generates message 3 considering critical ead items. This function should by used by on the 
+ *        initiator side.
+ * 
+ * @param c initiator context
+ * @param rc runtime context
+ * @param cred_r_array array of CRED_Rs
+ * @param num_cred_r Number of elements in CRED_R
+ * @param ead_2 EAD_2 contained in message 2
+ * @param ead_2_len length of EAD_2
+ * @param prk_out the derived secret (output)
+ * @param prk_out_len length of prk_4x3m
+ * @return enum err 
+ */
+enum err msg3_gen_extended(const struct edhoc_initiator_context *c,
+        struct runtime_context *rc,
+        struct other_party_cred *cred_r_array, uint16_t num_cred_r,
+        uint8_t *ead_2, uint32_t *ead_2_len, uint8_t *prk_out,
+        uint32_t prk_out_len,
+        enum err (*process_ead_2)(uint8_t *ead_2, uint32_t *ead_2_len));
+
+/**
  * @brief Processes message 4. This function should by used by on the initiator 
  *        side. 
  * 
@@ -90,6 +111,22 @@ enum err msg4_process(struct runtime_context *rc, uint8_t *ead_4,
  */
 enum err msg2_gen(struct edhoc_responder_context *c, struct runtime_context *rc,
 		  uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *c_i_bytes, uint32_t *c_i_bytes_len);
+
+/**
+ * @brief Generates message 2 considering critical ead items. This function should by used by on the responder 
+ *        side.
+ * 
+ * @param c responder context
+ * @param rc runtime context
+ * @param ead_1 EAD_1 from message 1 (output)
+ * @param ead_1_len length of EAD_1 
+ * @param c_i_bytes connection identifier C_I
+ * @param c_i_bytes_len length of C_I
+ * @return enum err 
+ */
+enum err msg2_gen_extended(struct edhoc_responder_context *c, struct runtime_context *rc,
+        uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
+        enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *ead_1, uint32_t *ead_1_len));
 
 /**
  * @brief Processes message 3. This function should by used by on the responder 

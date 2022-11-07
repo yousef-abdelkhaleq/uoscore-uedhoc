@@ -30,4 +30,21 @@ extern enum err tx(uint8_t *data, uint32_t data_len);
  */
 extern enum err rx(uint8_t *data, uint32_t *data_len);
 
+/**
+ * @brief   IN this function the user performs application specific processing of ead items that can decide 
+ *          on the protocol state (critical ead items), an example would be processing a staple after staple request in ead_1.
+ * @param   data pointer to a buffer containing ead_2
+ * @param   data_len length of the ead_2 cbor sequence
+ */
+extern enum err process_ead_2(uint8_t *ead_2, uint32_t *ead_2_len);
+
+/**
+ * @brief   In this function the user performs application specific processing of ead items that can decide 
+ *          on the protocol state (critical ead items), an example would be checking for a staple request in ead_1.
+ * @param   data pointer to a buffer containing ead_2
+ * @param   data_len length of the ead_2 cbor sequence
+ */
+extern enum err process_ead_1(struct edhoc_responder_context *c, uint8_t *ead_1, uint32_t *ead_1_len);
+
+
 #endif

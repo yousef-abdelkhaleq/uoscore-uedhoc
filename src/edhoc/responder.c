@@ -294,6 +294,138 @@ enum err msg2_gen(struct edhoc_responder_context *c, struct runtime_context *rc,
 	return ok;
 }
 
+enum err msg2_gen_extended(struct edhoc_responder_context *c, struct runtime_context *rc,
+        uint8_t *ead_1, uint32_t *ead_1_len, uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
+        enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *ead_1, uint32_t *ead_1_len))
+{
+
+	PRINT_ARRAY("message_1 (CBOR Sequence)", rc->msg1, rc->msg1_len);
+
+	enum method_type method = INITIATOR_SK_RESPONDER_SK;
+	uint8_t suites_i[SUITES_MAX];
+	uint32_t suites_i_len = sizeof(suites_i);
+	uint8_t g_x[G_X_DEFAULT_SIZE];
+	uint32_t g_x_len = sizeof(g_x);
+	uint8_t c_i[C_I_DEFAULT_SIZE];
+	uint32_t c_i_len = sizeof(c_i);
+
+	TRY(msg1_parse(rc->msg1, rc->msg1_len, &method, suites_i, &suites_i_len,
+		       g_x, &g_x_len, c_i, &c_i_len, ead_1, ead_1_len));
+
+	if ((NULL != c_i_bytes) && (NULL != c_i_bytes_len)) {
+		TRY(_memcpy_s(c_i_bytes, *c_i_bytes_len, c_i, c_i_len));
+		*c_i_bytes_len = c_i_len;
+	}
+
+	if (!(selected_suite_is_supported(suites_i[suites_i_len - 1],
+					  &c->suites_r))) {
+		// r = tx_err_msg(RESPONDER, method, c_i, c_i_len, NULL, 0,
+		// 	       c->suites_r.ptr, c->suites_r.len);
+		// if (r != ok) {
+		// 	return r;
+		// }
+		/*After an error message is sent the protocol must be discontinued*/
+		// PRINTF("After an error message is sent the protocol must be discontinued");
+		return error_message_sent;
+	}
+
+	/*get cipher suite*/
+	TRY(get_suite((enum suite_label)suites_i[suites_i_len - 1],
+		      &rc->suite));
+
+	bool static_dh_r;
+	authentication_type_get(method, &rc->static_dh_i, &static_dh_r);
+
+	/*process critical ead items*/
+	TRY(process_ead_1(c, ead_1, ead_1_len));
+
+	/******************* create and send message 2*************************/
+	uint8_t th2[HASH_DEFAULT_SIZE];
+	uint32_t th2_len = get_hash_len(rc->suite.edhoc_hash);
+	TRY(check_buffer_size(HASH_DEFAULT_SIZE, th2_len));
+	TRY(th2_calculate(rc->suite.edhoc_hash, rc->msg1, rc->msg1_len,
+			  c->g_y.ptr, c->g_y.len, c->c_r.ptr, c->c_r.len, th2));
+
+	/*calculate the DH shared secret*/
+	uint8_t g_xy[ECDH_SECRET_DEFAULT_SIZE];
+	TRY(shared_secret_derive(rc->suite.edhoc_ecdh, c->y.ptr, c->y.len, g_x,
+				 g_x_len, g_xy));
+
+	PRINT_ARRAY("G_XY (ECDH shared secret) ", g_xy, sizeof(g_xy));
+
+	uint8_t PRK_2e[PRK_DEFAULT_SIZE];
+	TRY(hkdf_extract(rc->suite.edhoc_hash, NULL, 0, g_xy, sizeof(g_xy),
+			 PRK_2e));
+	PRINT_ARRAY("PRK_2e", PRK_2e, sizeof(PRK_2e));
+
+	/*derive prk_3e2m*/
+	TRY(prk_derive(static_dh_r, rc->suite, SALT_3e2m, th2, th2_len, PRK_2e,
+		       sizeof(PRK_2e), g_x, g_x_len, c->r.ptr, c->r.len,
+		       rc->prk_3e2m));
+	PRINT_ARRAY("prk_3e2m", rc->prk_3e2m, rc->prk_3e2m_len);
+
+	/*compute signature_or_MAC_2*/
+	uint32_t sign_or_mac_2_len = get_signature_len(rc->suite.edhoc_sign);
+	TRY(check_buffer_size(SIGNATURE_DEFAULT_SIZE, sign_or_mac_2_len));
+
+	uint8_t sign_or_mac_2[SIGNATURE_DEFAULT_SIZE];
+	//don't pass ead_2.ptr and len as those are the encoded size
+	//instead pass a decoded ead //as in remove the bytestring length
+	if(c->ead_2.len<=17)
+	{
+		//only need to remove one byte
+	
+		TRY(signature_or_mac(GENERATE, static_dh_r, &rc->suite, c->sk_r.ptr, //problem here is that verification on the other side checks the decoded string //should be able to sign encoded string
+			     c->sk_r.len, c->pk_r.ptr, c->pk_r.len,
+			     rc->prk_3e2m, rc->prk_3e2m_len, th2, th2_len,
+			     c->id_cred_r.ptr, c->id_cred_r.len, c->cred_r.ptr,
+			     c->cred_r.len, c->ead_2.ptr+1, c->ead_2.len-1, MAC_2,
+			     sign_or_mac_2, &sign_or_mac_2_len));
+	}
+	else if (c->ead_2.len>>2==0) //1 byte representable
+	{
+		//need to remove two bytes
+		TRY(signature_or_mac(GENERATE, static_dh_r, &rc->suite, c->sk_r.ptr, //problem here is that verification on the other side checks the decoded string //should be able to sign encoded string
+			     c->sk_r.len, c->pk_r.ptr, c->pk_r.len,
+			     rc->prk_3e2m, rc->prk_3e2m_len, th2, th2_len,
+			     c->id_cred_r.ptr, c->id_cred_r.len, c->cred_r.ptr,
+			     c->cred_r.len, c->ead_2.ptr+2, c->ead_2.len-2, MAC_2,
+			     sign_or_mac_2, &sign_or_mac_2_len));
+	}
+	else
+	{
+		//need to remove 3 bytes //todo handle bigger byte string cases
+		TRY(signature_or_mac(GENERATE, static_dh_r, &rc->suite, c->sk_r.ptr, //problem here is that verification on the other side checks the decoded string //should be able to sign encoded string
+			     c->sk_r.len, c->pk_r.ptr, c->pk_r.len,
+			     rc->prk_3e2m, rc->prk_3e2m_len, th2, th2_len,
+			     c->id_cred_r.ptr, c->id_cred_r.len, c->cred_r.ptr,
+			     c->cred_r.len, c->ead_2.ptr+3, c->ead_2.len-3, MAC_2,
+			     sign_or_mac_2, &sign_or_mac_2_len));
+
+	}
+
+	/*compute ciphertext_2*/
+	uint8_t plaintext_2[PLAINTEXT_DEFAULT_SIZE];
+	uint32_t plaintext_2_len = sizeof(plaintext_2);
+	uint8_t ciphertext_2[CIPHERTEXT2_DEFAULT_SIZE];
+	uint32_t ciphertext_2_len = sizeof(ciphertext_2);
+	TRY(ciphertext_gen(CIPHERTEXT2, &rc->suite, c->id_cred_r.ptr,
+			   c->id_cred_r.len, sign_or_mac_2, sign_or_mac_2_len,
+			   c->ead_2.ptr, c->ead_2.len, PRK_2e, sizeof(PRK_2e),
+			   th2, th2_len, ciphertext_2, &ciphertext_2_len,
+			   plaintext_2, &plaintext_2_len));
+
+	/*message 2 create*/
+	TRY(msg2_encode(c->g_y.ptr, c->g_y.len, c->c_r.ptr, c->c_r.len,
+			ciphertext_2, ciphertext_2_len, rc->msg2,
+			&rc->msg2_len));
+
+	TRY(th3_calculate(rc->suite.edhoc_hash, th2, th2_len, plaintext_2,
+			  plaintext_2_len, rc->th3));
+
+	return ok;
+}
+
 enum err msg3_process(struct edhoc_responder_context *c,
 		      struct runtime_context *rc,
 		      struct other_party_cred *cred_i_array,
@@ -434,6 +566,45 @@ enum err edhoc_responder_run_extended(
 	return ok;
 }
 
+enum err edhoc_responder_run_extended_2(
+   struct edhoc_responder_context *c,
+   struct other_party_cred *cred_i_array, uint16_t num_cred_i,
+   uint8_t *err_msg, uint32_t *err_msg_len, uint8_t *ead_1,
+   uint32_t *ead_1_len, uint8_t *ead_3, uint32_t *ead_3_len,
+   uint8_t *prk_out, uint32_t prk_out_len,
+   uint8_t *client_pub_key, uint32_t *client_pub_key_size,
+   uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
+   enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
+   enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
+   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len))
+{
+	struct runtime_context rc = { 0 };
+	runtime_context_init(&rc);
+
+	PRINT_MSG("waiting to receive message 1...\n");
+	TRY(rx(c->sock, rc.msg1, &rc.msg1_len));
+	if (MSG_1_DEFAULT_SIZE < rc.msg1_len) {
+		return error_message_received;
+	}
+	TRY(msg2_gen_extended(c, &rc, ead_1, ead_1_len, c_i_bytes, c_i_bytes_len, process_ead_1));
+	TRY(tx(c->sock, rc.msg2, rc.msg2_len));
+
+	PRINT_MSG("waiting to receive message 3...\n");
+	TRY(rx(c->sock, rc.msg3, &rc.msg3_len));
+	if (MSG_3_DEFAULT_SIZE < rc.msg3_len) {
+		return error_message_received;
+	}
+	TRY(msg3_process(c, &rc, cred_i_array, num_cred_i, ead_3, ead_3_len,
+			 prk_out, prk_out_len, client_pub_key, client_pub_key_size));
+	if (c->msg4) {
+		TRY(msg4_gen(c, &rc));
+		TRY(tx(c->sock, rc.msg4, rc.msg4_len));
+	}
+
+	return ok;
+
+}
+
 enum err edhoc_responder_run(
 	struct edhoc_responder_context *c,
 	struct other_party_cred *cred_i_array, uint16_t num_cred_i,
@@ -448,4 +619,22 @@ enum err edhoc_responder_run(
 					    ead_1_len, ead_3, ead_3_len,
 					    prk_out, prk_out_len, NULL, NULL,
 					    NULL, NULL, tx, rx);
+}
+
+enum err edhoc_responder_run_extended_ead_proc(
+	struct edhoc_responder_context *c,
+	struct other_party_cred *cred_i_array, uint16_t num_cred_i,
+	uint8_t *err_msg, uint32_t *err_msg_len, uint8_t *ead_1,
+	uint32_t *ead_1_len, uint8_t *ead_3, uint32_t *ead_3_len,
+	uint8_t *prk_out, uint32_t prk_out_len,
+	enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
+	enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
+	enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len))
+  
+{
+	return edhoc_responder_run_extended_2(c, cred_i_array, num_cred_i,
+					    err_msg, err_msg_len, ead_1,
+					    ead_1_len, ead_3, ead_3_len,
+					    prk_out, prk_out_len, NULL, NULL,
+					    NULL, NULL, tx, rx, process_ead_1);
 }

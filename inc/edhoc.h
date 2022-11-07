@@ -208,6 +208,31 @@ enum err edhoc_initiator_run(
 	enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len));
 
 /**
+ * @brief   Executes the EDHOC protocol on the initiator side while considering critical EAD items that affect the state of the protocol
+ * @param   c cointer to a structure containing initialization parameters
+ * @param   cred_r_array containing elements of type other_party_cred used for
+ *          the retrival of the other party (the responder) parameters at run
+ *          time
+ * @param   num_cred_r number of the elements in cred_r_array
+ * @param   err_msg in case that an error message is received its contend is 
+ *          provided to the caller though the err_msg
+ * @param   ead_2 the received in msg2 additional data is provided to the 
+ *          caller through ead_2
+ * @param   ead_2_len length of ead_2
+ * @param   prk_out the derived shared secret
+ * @param   prk_out_len length of prk_out
+ */
+enum err edhoc_initiator_run_extended_2(
+   const struct edhoc_initiator_context *c,
+   struct other_party_cred *cred_r_array, uint16_t num_cred_r,
+   uint8_t *err_msg, uint32_t *err_msg_len, uint8_t *ead_2,
+   uint32_t *ead_2_len, uint8_t *ead_4, uint32_t *ead_4_len,
+   uint8_t *prk_out, uint32_t prk_out_len,
+   enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
+   enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
+   enum err (*process_ead_2)(uint8_t *data_ead_2, uint32_t *data_ead_2_len));
+
+/**
  * @brief   Executes the EDHOC protocol on the responder side
  * @param   c cointer to a structure containing initialization parameters
  * @param   cred_i_array containing elements of type other_party_cred used for 
@@ -233,6 +258,35 @@ enum err edhoc_responder_run(
 	uint8_t *prk_out, uint32_t prk_out_len,
 	enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
 	enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len));
+
+
+/**
+ * @brief   Executes the EDHOC protocol on the responder side while considering critical EAD items that affect the state of the protocol
+ * @param   c cointer to a structure containing initialization parameters
+ * @param   cred_i_array containing elements of type other_party_cred used for 
+ *          the retrival of the other party (the initiator) parameters at run 
+ *          time
+ * @param   num_cred_i number of the elements in cred_i_array
+ * @param   err_msg in case that an error message is received its contend is 
+ *          provided to the caller though the err_msg
+ * @param   ead_1 the received in msg1 additional data is provided to the caller 
+ *          through ead_1
+ * @param   ead_1_len length of ead_1
+ * @param   ead_3 the received in msg3 additional data is provided to the caller 
+ *          through ead_3
+ * @param   ead_3_len length of ead_3
+ * @param   prk_out the derived shared secret
+ * @param   prk_out_len length of prk_out
+ */
+enum err edhoc_responder_run_extended_ead_proc(
+   struct edhoc_responder_context *c,
+   struct other_party_cred *cred_i_array, uint16_t num_cred_i,
+   uint8_t *err_msg, uint32_t *err_msg_len, uint8_t *ead_1,
+   uint32_t *ead_1_len, uint8_t *ead_3, uint32_t *ead_3_len,
+   uint8_t *prk_out, uint32_t prk_out_len,
+   enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
+   enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
+   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len));
 
 /**
  * @brief   Executes the EDHOC protocol on the responder side
@@ -266,6 +320,42 @@ enum err edhoc_responder_run_extended(
 	uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
 	enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
 	enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len));
+
+/**
+ * @brief   Executes the EDHOC protocol on the responder side while considering critical EAD items that affect the state of the protocol
+ * @param   c cointer to a structure containing initialization parameters
+ * @param   cred_i_array containing elements of type other_party_cred used for
+ *          the retrival of the other party (the initiator) parameters at run
+ *          time
+ * @param   num_cred_i number of the elements in cred_i_array
+ * @param   err_msg in case that an error message is received its contend is
+ *          provided to the caller though the err_msg
+ * @param   ead_1 the received in msg1 additional data is provided to the caller
+ *          through ead_1
+ * @param   ead_1_len length of ead_1
+ * @param   ead_3 the received in msg3 additional data is provided to the caller
+ *          through ead_3
+ * @param   ead_3_len length of ead_3
+ * @param   prk_out the derived shared secret
+ * @param   prk_out_len length of prk_out
+ * @param   client_pub_key public key of the initiator
+ * @param   client_pub_key_size length of client_pub_key
+ * @param   c_i_bytes connection identifier
+ * @param   c_i_bytes_len length of c_i_bytes
+ */
+enum err edhoc_responder_run_extended_2(
+   struct edhoc_responder_context *c,
+   struct other_party_cred *cred_i_array, uint16_t num_cred_i,
+   uint8_t *err_msg, uint32_t *err_msg_len, uint8_t *ead_1,
+   uint32_t *ead_1_len, uint8_t *ead_3, uint32_t *ead_3_len,
+   uint8_t *prk_out, uint32_t prk_out_len,
+   uint8_t *client_pub_key, uint32_t *client_pub_key_size,
+   uint8_t *c_i_bytes, uint32_t *c_i_bytes_len,
+   enum err (*tx)(void *sock, uint8_t *data, uint32_t data_len),
+   enum err (*rx)(void *sock, uint8_t *data, uint32_t *data_len),
+   enum err (*process_ead_1)(struct edhoc_responder_context *c_1, uint8_t *data_ead_1, uint32_t *data_ead_1_len));
+
+
 
 /**
  * @brief Computes PRK_exporter from PRK_out
