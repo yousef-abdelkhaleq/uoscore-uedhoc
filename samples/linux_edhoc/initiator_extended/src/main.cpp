@@ -25,6 +25,8 @@ extern "C" {
 }
 #include "cantcoap.h"
 
+#define STAPLE_REQUEST_LABEL 0x21
+
 #define USE_IPV4
 // #define USE_IPV6
 /*comment this out to use DH keys from the test vectors*/
@@ -129,6 +131,75 @@ enum err rx(void *sock, uint8_t *data, uint32_t *data_len)
 	delete recvPDU;
 	return ok;
 }
+enum err get_tinyOCSP_certStatus_(uint8_t *responseData)
+{
+	uint8_t *walk=responseData;
+	uint32_t responseData_len= *walk;
+	walk+=responseData_len; //we should now be right on certStatus
+	if (*walk==1){
+		printf("certStatus: Good Certificate\n");
+		return ok;
+	}
+	else if (*walk==3){
+		printf("certStatus: Revoked Certificate\n");
+		return error_message_sent;
+	}
+	else{
+
+		printf("certStatus: unknown\n");
+		return error_message_sent;
+	}
+
+	return ok;
+}
+
+enum err parse_stapleRequest_ead_2_value(uint8_t **ead_value, uint8_t **responseData, uint8_t **signatureVal, uint8_t **sigAlg)
+{
+	uint8_t *walk=*ead_value;
+	uint32_t signatureVal_len;
+	uint32_t responseData_len;
+
+
+	//we'll do a quick parser here
+	if (*walk !=0x59) //2 byte representable byteString
+	{
+		printf("malformed staple.\n");
+		return malformed_ead_value;
+	}
+	else 
+	{
+		walk+=3; //now at 0x58
+		walk+=1;
+		responseData_len = *walk;
+		walk++;
+		*responseData=walk-1; //go back to length part
+		PRINT_ARRAY("tinyOCSP responseData:",*responseData+1,responseData_len); //+1 to skip length
+		walk+=responseData_len; //should now be at signature
+		if (*walk!=0x58) 
+		{
+		  	printf("malformed staple.\n");
+			return malformed_ead_value;
+		}
+		else
+		{
+			walk++;
+			signatureVal_len = *walk;
+			walk++;
+			*signatureVal=walk;
+			PRINT_ARRAY("tinyOCSP signatureVal:",*signatureVal,signatureVal_len);
+			//won't worry about parsing sigAlg now since it's known for this ead item
+		}
+	}
+	//we can now perform all required verifications
+	//verify signature
+	//verify responderID
+	//verify producedAt
+	//verify nonce
+
+	//Do not attempt to use this function in a production setting as most of the verification measures aren't implemented
+
+	return ok;
+}
 
 enum err process_ead_2(uint8_t *ead_2, uint32_t *ead_2_len)
 {
@@ -136,22 +207,22 @@ enum err process_ead_2(uint8_t *ead_2, uint32_t *ead_2_len)
 	PRINT_ARRAY("msg2 ead_2", ead_2, *ead_2_len);
 
 	//we can act on EAD_2 from here and accordingly stop EDHOC for example in the case of an invalid OCSP staple
+	uint8_t *walk=ead_2;
+	if(*walk==STAPLE_REQUEST_LABEL) //only expecting staple request label in ead item now //generic parser is another task
+	{
+		walk++; //pointing at ead_value head now
+		//create pointers for responseData, signatureVal and sigAlg
+		uint8_t *responseData, *signatureVal, *sigAlg;
+		printf("Received staple including signed tinyOCSP response.\n");
+		//parse the staple inside ead_value
+		TRY(parse_stapleRequest_ead_2_value(&walk, &responseData, &signatureVal, &sigAlg));
+		TRY(get_tinyOCSP_certStatus_(responseData));
 
-	//function returns an int 1 for valid staple //this function can instead be passed as a handle to the caller function
-	//EAD_get staple -> parse staple -> verify staple -> get cert status
-												// ->{verify signature, verify responder id, verify produced at, verify nonce} 
-
+	}
 
 	return ok;
 }
 
-//function returns an int 1 for valid staple //this function can instead be passed as a handle to the caller function
-//EAD_get staple -> parse staple -> verify staple -> get cert status
-												// ->{verify signature, parse responseData, verify responder id, verify produced at, verify nonce} 
-
-//parse staple function will set the pointers to the responseData, signature Value and signature alg
-
-//parse responseData will set the pointers to the members of responseData which can then be used in the other verify functions
 
 int main()
 {

@@ -48,12 +48,31 @@ extern enum err process_ead_1(struct edhoc_responder_context *c, uint8_t *ead_1,
 
 
 /**
- * @brief   In this function the user implements a parser for an OCSP staple request and calls the parse when finding a staple request label
+ * @brief   In this function the user implements a parser for an OCSP staple request and calls the parser when finding a staple request label
  *          during processing the ead item
  * @param   data pointer to a buffer containing ead_2
  * @param   data_len length of the ead_2 cbor sequence
  */
 extern enum err parse_stapleRequest_ead_1_value(uint8_t *ead_value, uint8_t *responderIdList, uint8_t *nonce_option);
+
+
+/**
+ * @brief   In this function the user implements a parser for a tinyOCSP response staple and calls the parser when finding a staple request label
+ *          during processing the ead item
+ * @param   data pointer to a buffer containing ead_2
+ * @param   data_len length of the ead_2 cbor sequence
+ */
+extern enum err parse_stapleRequest_ead_2_value(uint8_t **ead_value, uint8_t **responseData, uint8_t **signatureVal, uint8_t **sigAlg);
+
+
+/**
+ * @brief   In this function the user implements a parser for a tinyOCSP response staple to check the certificateStatus header in the tinyOCSP response
+ * @param   data pointer to a buffer containing ead_2
+ * @param   data_len length of the ead_2 cbor sequence
+ */
+extern enum err get_tinyOCSP_certStatus_(uint8_t *responseData);
+
+
 
 
 
