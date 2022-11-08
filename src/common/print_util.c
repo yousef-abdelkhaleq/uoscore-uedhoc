@@ -14,7 +14,7 @@
 
 #include "common/print_util.h"
 
-void print_array(const uint8_t *in_data, uint32_t in_len)
+void print_array_1(const uint8_t *in_data, uint32_t in_len)
 {
 	printf(" (size %lu):", (unsigned long)in_len);
 	for (uint32_t i = 0; i < in_len; i++) {

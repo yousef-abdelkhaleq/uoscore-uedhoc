@@ -17,12 +17,12 @@
 /**
  *@brief prints an array for debug pourposes 
  */
-void print_array(const uint8_t *in_data, uint32_t in_len);
+void print_array_1(const uint8_t *in_data, uint32_t in_len);
 
 #ifdef DEBUG_PRINT
 #define PRINT_ARRAY(msg, a, a_len)                                             \
 	printf(msg);                                                           \
-	print_array(a, a_len);
+	print_array_1(a, a_len);
 #define PRINT_MSG(msg) printf(msg);
 #define PRINTF(f_, ...) printf((f_), ##__VA_ARGS__);
 #else
