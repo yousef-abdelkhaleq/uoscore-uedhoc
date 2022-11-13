@@ -26,7 +26,8 @@ BUILD_DIR = build
 USOCORE_UEDHOC_PATH = ../../../
 USOCORE_UEDHOC_BUILD_PATH = $(USOCORE_UEDHOC_PATH)build
 
-# lssl ,lcrypto path
+#lib openssl Apps path
+LIB_OPENSSL_APPS_PATH=/home/trexozz/thesis_rise/openssl-tinyOCSP/openssl-3.0.5/apps
 
 ifeq ($(ARCH_32_ONLY), 1)
 # build for 32 bit x68
@@ -70,17 +71,24 @@ C_INCLUDES += -I../../../externals/mbedtls/include/psa
 C_INCLUDES += -I../../../externals/compact25519/src/
 C_INCLUDES += -I../../../externals/compact25519/src/c25519
 
+C_INCLUDES += -I ./openssl-tinyOCSP
+C_INCLUDES += -I /usr/local/ssl/include/
+
 # C defines
 # make PRINT_ARRAY macro usable in the main file
 C_DEFS += -DDEBUG_PRINT
 
 # Linked libraries
 LD_LIBRARY_PATH += -L$(USOCORE_UEDHOC_BUILD_PATH)
-
+LD_LIBRARY_PATH += -L$(LIB_OPENSSL_APPS_PATH)
+LD_LIBRARY_PATH += -L  /usr/local/ssl/lib64/
 
 
 LDFLAGS += $(LD_LIBRARY_PATH)
 LDFLAGS += -luoscore-uedhoc
+LDFLAGS += -lapps
+LDFLAGS += -lcrypto
+LDFLAGS += -lssl
 LDFLAGS += $(ARCH) 
 ##########################################
 # CFLAGS
@@ -123,6 +131,9 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
 vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 
+tinyOCSP_obj=./openssl-tinyOCSP/tinyOcsp-req.o
+
+
 USOCORE_UEDHOC_OBJ = $(wildcard $(USOCORE_UEDHOC_PATH)/*.o) 
 
 $(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR) 
@@ -133,7 +144,7 @@ $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 
 $(BUILD_DIR)/$(TARGET): $(OBJECTS) Makefile $(USOCORE_UEDHOC_PATH)/Makefile
 	$(MAKE) -C $(USOCORE_UEDHOC_PATH)
-	$(CXX) $(OBJECTS)  $(LDFLAGS) -o $@
+	$(CXX) $(OBJECTS) $(tinyOCSP_obj) $(LDFLAGS) -o $@
 	$(SZ) $@
 
 $(BUILD_DIR):
