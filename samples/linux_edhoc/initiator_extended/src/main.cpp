@@ -140,7 +140,7 @@ enum err get_tinyOCSP_certStatus_(uint8_t *responseData)
 		printf("certStatus: Good Certificate\n");
 		return ok;
 	}
-	else if (*walk==3){
+	else if (*walk==2){
 		printf("certStatus: Revoked Certificate\n");
 		return error_message_sent;
 	}
